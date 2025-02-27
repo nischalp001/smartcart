@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Cart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body class="bg-gray-100 h-screen">
+    <header class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-4 flex items-center">
+            <i class="fas fa-shopping-cart text-blue-500 text-2xl mr-2"></i>
+            <h1 class="text-xl font-semibold text-blue-500">Smart Cart</h1>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 flex flex-col lg:flex-row h-full">
+        <!-- Live Video Feed -->
+        <div class="flex-1 rounded-lg overflow-hidden relative h-full">
+            <img id="videoFeed" src="{% url 'video_feed' %}" class="w-full h-full object-cover">
+        </div>
+
+        <!-- Shopping Cart Section -->
+        <div class="w-full lg:w-1/3 lg:ml-8 mt-8 lg:mt-0">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-lg font-semibold flex items-center">
+                    <i class="fas fa-shopping-basket text-black mr-2"></i> Your Cart
+                </h2>
+                <ul id="cartList" class="mt-2 text-sm text-gray-700">
+                    <li>Loading detected items...</li>
+                </ul>
+                <button onclick="showCheckout()" class="mt-4 w-full bg-blue-500 text-white py-2 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-cash-register mr-2"></i> Check Out
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Checkout Modal -->
+    <div id="checkoutModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
+            <h2 class="text-xl font-semibold mb-4">Checkout Summary</h2>
+            <ul id="checkoutItems" class="mb-4"></ul>
+            <p class="font-semibold">Total: Rs. <span id="totalAmount">0</span></p>
+            <div class="flex flex-col items-center mt-4">
+                <button id="proceedPayment" onclick="showQRCode()" class="px-4 py-2 bg-blue-500 text-white rounded-lg">Proceed to Payment</button>
+                <div id="qrCodeContainer" class="mt-4 hidden">
+                    <p class="text-sm text-gray-700">Scan this QR to pay</p>
+                    <img id="qrImage" src="your-qr-code-image.png" class="mt-2 w-32 h-32" alt="QR Code">
+                </div>
+            </div>
+            <button onclick="closeModal()" class="mt-4 px-4 py-2 bg-gray-400 text-white rounded-lg">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        function updateCart() {
+            fetch("/get_detected_items/")
+                .then(response => response.json())
+                .then(data => {
+                    let cartList = document.getElementById("cartList");
+                    cartList.innerHTML = "";
+                    if (data.items.length === 0) {
+                        cartList.innerHTML = "<li>No items detected yet.</li>";
+                    } else {
+                        data.items.forEach(item => {
+                            cartList.innerHTML += `<li>${item.name} * ${item.count} - Rs. ${item.price * item.count}</li>`;
+                        });
+                    }
+                });
+        }
+        setInterval(updateCart, 3000);
+
+        function showCheckout() {
+            fetch("/get_detected_items/")
+                .then(response => response.json())
+                .then(data => {
+                    let checkoutItems = document.getElementById("checkoutItems");
+                    let totalAmount = document.getElementById("totalAmount");
+                    checkoutItems.innerHTML = "";
+
+                    let total = 0;
+                    data.items.forEach(item => {
+                        total += item.count * item.price;
+                        checkoutItems.innerHTML += `<li>${item.name} * ${item.count} - Rs. ${item.count * item.price}</li>`;
+                    });
+
+                    totalAmount.textContent = total;
+                    document.getElementById("checkoutModal").classList.remove("hidden");
+                })
+                .catch(error => console.error("Error loading checkout:", error));
+        }
+
+        function closeModal() {
+            document.getElementById("checkoutModal").classList.add("hidden");
+            document.getElementById("qrCodeContainer").classList.add("hidden"); // Hide QR when modal closes
+        }
+
+        function showQRCode() {
+            document.getElementById("qrCodeContainer").classList.remove("hidden");
+            document.getElementById("proceedPayment").style.display = "none"; // Hide button after QR is shown
+        }
+    </script>
+</body>
+</html>
